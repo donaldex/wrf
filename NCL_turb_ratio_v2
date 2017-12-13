@@ -1,0 +1,249 @@
+;   Example script to produce standard plots for a WRF quarter_ss run
+
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
+;load "./WRFUserARW.ncl"
+
+begin
+;
+; The WRF ARW input file.  
+; This needs to have a ".nc" appended, so just do it.
+
+  a = addfile("../wrfout_d01_0001-01-01_00:00:00.nc","r")
+
+;  We generate plots, but what kind do we prefer?
+
+;   type = "x11"
+   type = "pdf"
+;  type = "ps"
+;  type = "ncgm"
+
+   wks = gsn_open_wks(type,"plt_tke_ratio_v2")
+;;;new add
+   gsn_define_colormap(wks,"WhBlGrYeRe")
+
+; Set some basic resources   
+
+    res = True
+    opts_qc =True
+    res@tiMainString = "subgrid tke ratio"
+    res@tiXAxisString="East-West"
+    res@tiYAxisString="Vertical grid point"
+    pltres = True
+    res@cnFillOn =True
+    res@cnLinesOn=False
+    opts_qc@UnitLabel            = "g/kg"
+    opts_qc@cnLinesOn            = True
+    opts_qc@CnFillOn             = False
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;  What times and how many time steps are in the data set?
+
+  times  = wrf_user_list_times(a)  ; get times in the file
+  ntimes = dimsizes(times)         ; number of times in the file
+
+; The specific height levels that we want the data interpolated to.
+
+
+; How big do we want the plot
+plot_width = .6
+plot_height = .6
+
+; This is the big loop over all of the time periods to process.
+
+
+
+maxtke1_time=new(ntimes,float)
+maxtke1_time=0
+
+maxtke2_time=new(ntimes,float)
+maxtke2_time=0
+maxtke3_time=new(ntimes,float)
+maxtke3_time=0
+maxtke4_time=new(ntimes,float)
+maxtke4_time=0
+
+
+
+
+
+
+
+
+
+
+
+  do it = 1,ntimes-1
+
+    time = it
+ 
+;;    res@TimeLabel                  = times(it)    
+    res@vpWidthF                   = plot_width
+    res@vpHeightF                  = plot_height
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; First get the variables we will need        
+  ph=wrf_user_getvar(a,"PH",time)    ;
+  phb=wrf_user_getvar(a,"PHB",time)  ;
+  tot_ph=ph+phb   ;
+;  p   = wrf_user_getvar(a, "pressure",time)    ; pressure
+;  th  = wrf_user_getvar(a,"th",time)    ; get temperature (C)
+  u   = wrf_user_getvar(a,"ua",time)    ; ua is u averaged to mass points
+  v   = wrf_user_getvar(a,"va",time)    ; va is v averaged to mass points
+  w   = wrf_user_getvar(a,"wa",time)    ; vertical velocity
+  z   = wrf_user_getvar(a, "z",time)    ; grid point height
+
+  tkea = wrf_user_getvar(a,"TKE",time)   ;;tke
+
+;  ter = wrf_user_getvar(a,"HGT",time)   ; need terrain height sometimes
+
+;  qv  = wrf_user_getvar(a, "QVAPOR",time) ; 
+  if(isfilevar(a,"QCLOUD"))
+    qc =   wrf_user_getvar(a, "QCLOUD",time)
+  end if
+;  if(isfilevar(a,"QRAIN"))
+;    qr =   wrf_user_getvar(a, "QRAIN",time)
+;  end if
+;  if(isfilevar(a,"QSNOW"))
+;    qs =   wrf_user_getvar(a, "QSNOW",time)
+;  end if
+;  if(isfilevar(a,"QICE"))
+;    qi =   wrf_user_getvar(a, "QICE",time)
+;  end if
+;  if(isfilevar(a,"QGRAUP"))
+;    qg =   wrf_user_getvar(a, "QGRAUP",time)
+;  end if
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+qc=qc*1000
+
+;;initialized
+
+resolvetke=new(dimsizes(qc(:,:,:)),float)
+resolvetke=0
+avgy_u=new(dimsizes(qc(:,0,:)),float)
+avgy_v=new(dimsizes(qc(:,0,:)),float)
+avgy_w=new(dimsizes(qc(:,0,:)),float)
+avgy_tke=new(dimsizes(qc(:,0,:)),float)
+avgy_qc=new(dimsizes(qc(:,0,:)),float)
+
+tkeratio=new(dimsizes(qc(:,0,:)),float)
+tkeratio=0.
+
+avgy_u=0
+avgy_v=0
+avgy_w=0
+avgy_tke=0
+avgy_qc=0
+cloudtopgrid=1
+qcnotzerocount=new(dimsizes(qc(:,0,:)),float)
+qcnotzerocount=0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;averaging
+
+;u_flu=u(:,:,:)
+;v_flu=v(:,:,:)
+;w_flu=w(:,:,:)
+
+;;do stepy = 0,dimsizes(qc(0,:,0))-1
+
+do stepz= 0,dimsizes(qc(:,0,0))-1
+do stepx= 0,dimsizes(qc(0,0,:))-1
+
+avgy_u(stepz,stepx)=sum(u(stepz,:,stepx))
+avgy_v(stepz,stepx)=sum(v(stepz,:,stepx))
+avgy_w(stepz,stepx)=sum(w(stepz,:,stepx))
+avgy_tke(stepz,stepx)=sum(tkea(stepz,:,stepx))
+avgy_qc(stepz,stepx)=sum(qc(stepz,:,stepx))
+
+end do
+end do
+
+
+avgy_u=avgy_u/dimsizes(qc(0,:,0))
+avgy_v=avgy_v/dimsizes(qc(0,:,0))
+avgy_w=avgy_w/dimsizes(qc(0,:,0))
+;;;;
+
+
+
+;;avgy_u(stepz,stepx)=avgy_u(stepz,stepx)/qcnotzerocount
+;;avgy_v(stepz,stepx)=avgy_v(stepz,stepx)/qcnotzerocount
+;;avgy_w(stepz,stepx)=avgy_w(stepz,stepx)/qcnotzerocount
+;;avgy_tke(stepz,stepx)=avgy_tke(stepz,stepx)/qcnotzerocount
+
+
+do stepz= 0,dimsizes(qc(:,0,0))-1
+do stepx= 0,dimsizes(qc(0,0,:))-1
+do stepy= 0,dimsizes(qc(0,:,0))-1
+
+
+if (qc(stepz,stepy,stepx) .gt. 0) then
+resolvetke(stepz,stepy,stepx)=((u(stepz,stepy,stepx)-avgy_u(stepz,stepx))*(u(stepz,stepy,stepx)-avgy_u(stepz,stepx))+(v(stepz,stepy,stepx)-avgy_v(stepz,stepx))*(v(stepz,stepy,stepx)-avgy_v(stepz,stepx))+(w(stepz,stepy,stepx)-avgy_w(stepz,stepx))*(w(stepz,stepy,stepx)-avgy_w(stepz,stepx)))*0.5
+qcnotzerocount(stepz,stepx)=qcnotzerocount(stepz,stepx)+1
+end if
+
+
+end do
+end do
+end do
+
+
+
+do stepz = 0,dimsizes(qc(:,0,0))-1
+do stepx = 0,dimsizes(qc(0,0,:))-1
+;do stepy = 0,dimsizes(qc(0,:,0))-1
+
+;;subgrid/(subgrid+resolve)
+
+
+if (sum(qc(stepz,:,stepx)) .gt. 0) then
+avgy_qc(stepz,stepx)=avgy_qc(stepz,stepx)/qcnotzerocount(stepz,stepx)
+
+tkeratio(stepz,stepx)=avgy_tke(stepz,stepx)/qcnotzerocount(stepz,stepx)/(avgy_tke(stepz,stepx)/qcnotzerocount(stepz,stepx)+(sum(resolvetke(stepz,:,stepx))/qcnotzerocount(stepz,stepx))) ;;;;;problem with this line
+
+end if
+
+
+end do
+end do
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+maxtke1_time(it)=(max(tkea))
+maxtke2_time(it)=(max(avgy_tke))
+maxtke3_time(it)=(max(resolvetke))
+maxtke4_time(it)=(max(tkeratio))
+;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+opts_qc@gsnRightString=times(it)
+
+contour_avgy_qc = gsn_csm_contour(wks,avgy_qc,opts_qc)
+contour_tkeratio= gsn_csm_contour(wks,tkeratio,res)
+
+plot = wrf_overlays(a,wks,(/contour_tkeratio, contour_avgy_qc/),pltres)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+  ;       ************************************************************
+
+  end do  ;       end of the time loop
+asciiwrite("tkeratio1_v2.o",maxtke1_time)
+asciiwrite("tkeratio2_v2.o",maxtke2_time)
+asciiwrite("tkeratio3_v2.o",maxtke3_time)
+asciiwrite("tkeratio4_v2.o",maxtke4_time)
+end

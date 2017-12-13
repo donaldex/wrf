@@ -1,0 +1,158 @@
+;;;;;actual height qc contour
+
+;   Example script to produce standard plots for a WRF quarter_ss run
+
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
+;load "./WRFUserARW.ncl"
+
+begin
+;
+; The WRF ARW input file.  
+; This needs to have a ".nc" appended, so just do it.
+
+  a = addfile("../wrfout_d01_0001-01-01_00:00:00.nc","r")
+
+;  We generate plots, but what kind do we prefer?
+
+;   type = "x11"
+  type = "pdf"
+;  type = "ps"
+;  type = "ncgm"
+
+  wks = gsn_open_wks(type,"plt_qc_contour_v4")
+
+
+; Set some basic resources
+    res = True
+;    res@InitTime      = False
+;    res@Footer        = False
+ res@cnFillPalette="BlAqGrYeOrReVi200"
+
+  res@cnLevelSelectionMode="ExplicitLevels"
+;; res@cnLevelSpacingF = 0.001
+   res@cnLevels =(/10^(-20), 10^(-11),10^(-10), 0.02, 0.04,0.06,0.08,0.1,0.12,0.14,0.16,0.18,0.2,0.22,0.24,0.26 /)
+    pltres = True
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;  What times and how many time steps are in the data set?
+   
+  times  = wrf_user_list_times(a)  ; get times in the file
+  ntimes = dimsizes(times)         ; number of times in the file
+
+; The specific height levels that we want the data interpolated to.
+   gridspace=250
+   top=25000
+   lvl=top/gridspace
+   height_levels=new(lvl+1,float)
+   height_levels=0
+   do n=1,lvl
+    height_levels(n)=gridspace*n
+   end do
+
+;  height_levels = (/ 750., 1500., 4000., 9000. /)   ; heigth levels to plot
+;  nlevels         = dimsizes(height_levels)     ; number of height levels
+
+; How big do we want the plot
+plot_width = .6
+plot_height = .6
+
+; This is the big loop over all of the time periods to process.
+
+M=(/lvl+1,ntimes/)
+avg_qczt=new(M,float)
+avg_qczt=0
+
+
+
+  do it = 0,ntimes-1
+
+    time = it
+ 
+;    res@TimeLabel                  = times(it)    
+    res@vpWidthF                   = plot_width
+    res@vpHeightF                  = plot_height
+
+
+
+;;;;;;for contour
+
+    res@cnFillOn =True
+;    res@cnFillPalette="gui_default"
+    res@cnLinesOn=False
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; First get the variables we will need        
+;  ph=wrf_user_getvar(a,"PH",time)    ;
+;  phb=wrf_user_getvar(a,"PHB",time)  ;
+;  tot_ph=ph+phb   ;
+;  p   = wrf_user_getvar(a, "pressure",time)    ; pressure
+;  th  = wrf_user_getvar(a,"th",time)    ; get temperature (C)
+;  u   = wrf_user_getvar(a,"ua",time)    ; ua is u averaged to mass points
+;  v   = wrf_user_getvar(a,"va",time)    ; va is v averaged to mass points
+;  w   = wrf_user_getvar(a,"wa",time)    ; vertical velocity
+  z   = wrf_user_getvar(a, "z",time)    ; grid point height
+;  ter = wrf_user_getvar(a,"HGT",time)   ; need terrain height sometimes
+
+;  qv  = wrf_user_getvar(a, "QVAPOR",time) ; 
+  if(isfilevar(a,"QCLOUD"))
+    qc =   wrf_user_getvar(a, "QCLOUD",time)
+  end if
+;  if(isfilevar(a,"QRAIN"))
+;    qr =   wrf_user_getvar(a, "QRAIN",time)
+;  end if
+;  if(isfilevar(a,"QSNOW"))
+;    qs =   wrf_user_getvar(a, "QSNOW",time)
+;  end if
+;  if(isfilevar(a,"QICE"))
+;    qi =   wrf_user_getvar(a, "QICE",time)
+;  end if
+;  if(isfilevar(a,"QGRAUP"))
+;    qg =   wrf_user_getvar(a, "QGRAUP",time)
+;  end if
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;initialized
+avg_qc=new(lvl+1,float)
+avg_qc=0
+cloudtopgrid=1
+
+do level=0,lvl
+height=height_levels(level)
+
+if (isvar("qc"))
+        qc_plane  = wrf_user_intrp3d( qc,z,"h",height,0.,False)
+        qc_plane  = qc_plane*1000.
+;        opts_qc = opts_clouds
+        ;opts_qc@FieldTitle       = qc@description
+;        contour_qc     = wrf_contour(a,wks,qc_plane,opts_qc)
+;        plot = wrf_overlays(a,wks,(/contour_qc,vector/),pltres)
+      end if
+
+avg_qc(level)=sum(qc_plane)/dimsizes(qc(0,:,0))/dimsizes(qc(0,0,:))
+end do
+
+
+avg_qczt(:,it)=avg_qc ;;;;;can make contour from this
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+res@tiMainString          = " qc contour"      ; main title
+res@lbOrientation               = "Vertical"
+res@tiXAxisString         = "time (x10 mins)"      ; label bottom axis with units attribute
+
+res@tmYLMode             = "Explicit"
+res@tiYAxisString         ="Height (250m)"
+res@tmYLLabels          = (/ "0","5", "10", "15", "20", "25" /)
+res@tmYLValues          = (/0,16.666,33.33,50,66.66/)
+;;;;;;;;;;;;;;;;;;;;;
+
+  end do  ;       end of the time loop
+plot= gsn_csm_contour(wks,avg_qczt,res)
+;;plot=gsn_xy(wks,cloudtopvstime,times,True)
+;;asciiwrite("cloudtopvstime_v4.o",cloudtopvstime)
+asciiwrite("avg_qczt_v4.o",avg_qczt)
+end
