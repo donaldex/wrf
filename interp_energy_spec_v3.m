@@ -9,6 +9,7 @@ z=(ph+phb)/9.8;
 h=2000;  %%%height
 [nx,ny,nz,nt]=size(w_in);
 w=w_in;
+sik=size(w)
 %w=w_in(:,:,:,time);
 %z=z(:,:,:,time);
 p=0;
@@ -22,7 +23,7 @@ for i=1:nx
      if (z(i,j,k)<=h && z(i,j,k+1)>=h)
          p=(h-z(i,j,k))/(z(i,j,k+1)-z(i,j,k));
          W_XY(i,j)=w(i,j,k)+(w(i,j,k+1)-w(i,j,k))*p;
-         k
+         k;
       end  
        end
    end
