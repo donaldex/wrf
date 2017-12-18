@@ -1,15 +1,17 @@
-function x=interp_energy_spec_v3
+function a=interp_energy_spec_v4(time)
 %%indepedent program
 
-w_in=ncread('wrfout_d01_0001-01-01_00:00:00','W',[1,1,1,21],[576,144,101,1]);
-ph=ncread('wrfout_d01_0001-01-01_00:00:00','PH',[1,1,1,21],[576,144,101,1]);
-phb=ncread('wrfout_d01_0001-01-01_00:00:00','PHB',[1,1,1,21],[576,144,101,1]);
+w_in=ncread('wrfout_d01_0001-01-01_00:00:00','W',[1,1,1,time],[576,144,101,1]);
+ph=ncread('wrfout_d01_0001-01-01_00:00:00','PH',[1,1,1,time],[576,144,101,1]);
+phb=ncread('wrfout_d01_0001-01-01_00:00:00','PHB',[1,1,1,time],[576,144,101,1]);
 z=(ph+phb)/9.8;
 %time=21;
-h=2000;  %%%height
+h=5000;  %%%height
 [nx,ny,nz,nt]=size(w_in);
-%%w=w_in(:,:,:,time);
-%%z=z(:,:,:,time);
+w=w_in;
+sik=size(w)
+%w=w_in(:,:,:,time);
+%z=z(:,:,:,time);
 p=0;
 W_XY=zeros(size(z));
 W_XY=W_XY(:,:,1);
@@ -21,7 +23,7 @@ for i=1:nx
      if (z(i,j,k)<=h && z(i,j,k+1)>=h)
          p=(h-z(i,j,k))/(z(i,j,k+1)-z(i,j,k));
          W_XY(i,j)=w(i,j,k)+(w(i,j,k+1)-w(i,j,k))*p;
-         k
+         k;
       end  
        end
    end
@@ -85,12 +87,12 @@ Ek1 = 0.5*abs(uhat1(1:N/2+1)).^2;
 Ek1(2:N/2) = Ek1(2:N/2) + 0.5*abs(uhat1(N:-1:N/2+2)).^2;
 a=Ek1;
 
-k=[0:N/2];
-loglog(k,a)
+%k=[0:N/2];
+%loglog(k,a)
 %logkhalf,b,'b',logkhalf,c,'g');
-title('energy spectrum');
-xlabel('k')
-ylabel('Ek_w')
+%title('energy spectrum');
+%xlabel('k')
+%ylabel('Ek_w')
 
 
 

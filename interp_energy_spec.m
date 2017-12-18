@@ -6,19 +6,45 @@ ph=ncread('wrfout_d01_0001-01-01_00:00:00','PH');
 phb=ncread('wrfout_d01_0001-01-01_00:00:00','PHB');
 z=(ph+phb)/9.8;
 time=21;
+deltax=1000;
+[nx,ny,nz,nt]=size(w_in);
+%N=[1:nx]
+%M=[1:ny]
+%P=[1:nz]
 w=w_in(:,:,:,time);
 z=z(:,:,:,time);
-wq=interp3(w);
+
+X=zeros(size(z));
+Y=zeros(size(z));
+
+
+for i=1:nx
+    X(i,:,:)=(i-1)*deltax;
+end
+
+for j=1:ny
+
+Y(:,j,:)=(j-1)*deltax;
+end
+
+XQ=X(:,:,1);
+YQ=Y(:,:,1);
+ZQ=X(:,:,1);
+ZQ(:,:)=5000;
+
+
+wq=interp3(X,Y,z,w,XQ,YQ,ZQ);
 zq=interp3(z);
-[nx,ny,nz,nt]=size(wq);
+%[nx,ny,nz]=size(wq);
 avgy_wq=zeros(nx,nz);
 flu_wq=zeros(nx,ny,nz);
 sumy_wq=zeros(nx,nz);
+
 %%%%%%%%%%%%%%points at 5km
-pt = find(zq>5000 & zq<5025);
-k_index=floor(pt/nx/ny)+1;
-j_index=floor((pt-(k_index-1)*nx*ny)/ny)+1;
-i_index=pt-(k_index-1)*nx*ny-(j_index-1)*ny;
+%pt = find(zq>5000 & zq<5025);
+%k_index=floor(pt/nx/ny)+1;
+%j_index=floor((pt-(k_index-1)*nx*ny)/ny)+1;
+%i_index=pt-(k_index-1)*nx*ny-(j_index-1)*ny;
 
 
 

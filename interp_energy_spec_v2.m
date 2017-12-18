@@ -1,36 +1,31 @@
 function x=interp_energy_spec_v2
 %%indepedent program
 
-w_in=ncread('wrfout_d01_0001-01-01_00:00:00','W');
-ph=ncread('wrfout_d01_0001-01-01_00:00:00','PH');
-phb=ncread('wrfout_d01_0001-01-01_00:00:00','PHB');
-z=(ph+phb)/9.8;
-time=21;
+w_in=ncread('wrfout_d01_0001-01-01_00:00:00','W',[1,1,1,21],[576,144,101,1]);
+ph=ncread('wrfout_d01_0001-01-01_00:00:00','PH',[1,1,1,21],[576,144,101,1]);
+phb=ncread('wrfout_d01_0001-01-01_00:00:00','PHB',[1,1,1,21],[576,144,101,1]);
+z=(ph+phb)/9.81;
+%time=21;
 deltax=1000;
 [nx,ny,nz,nt]=size(w_in);
 %N=[1:nx]
 %M=[1:ny]
 %P=[1:nz]
-w=w_in(:,:,1:10,time);
-z=z(:,:,1:10,time);
+w=w_in(:,:,:);
+z=z(:,:,:);
 z=double(z);
 w=double(w);
-X1=zeros(size(z));
-Y1=zeros(size(z));
 
+x1d=[0:576-1]'*1000;
+y1d=[0:144-1]'*1000;
+z1d=[0:101-1]'*100;
+[X1,Y1,Z1]=meshgrid(x1d,y1d,z1d);
 
-for i=1:nx
-    X1(i,:,:)=(i-1)*deltax;
-end
-
-for j=1:ny
-  Y1(:,j,:)=(j-1)*deltax;
-end
 
 XQ=X1(:,:,1);
 YQ=Y1(:,:,1);
 ZQ=X1(:,:,1);
-ZQ(:,:)=500;
+ZQ(:,:)=5000;
 
 wq=interp3(X1,Y1,z,w,XQ,YQ,ZQ);
 %[nx,ny,nz]=size(wq);
